@@ -21,6 +21,12 @@ typedef struct{
 	int size;
 }Array;
 
+typedef struct{
+	float* array;
+	int used;
+	int size;
+};
+
 void shockwave(const char* q2_file);
 
 void linalgbsys(const char* q4_file);
@@ -45,8 +51,8 @@ void insertArray(Array *a, shockSolution element);
 
 void freeArray(Array *a);
 
-//void thetaSweep(Array *results, float M, float T, float B_u, float B_l, float G);
-Array thetaSweep(float M, float T, float B_u, float B_l, float G);
+void thetaSweep(Array *results, float M, float T, float B_u, float B_l, float G);
+//Array* thetaSweep(float M, float T, float B_u, float B_l, float G);
 
 
 #endif

@@ -66,10 +66,9 @@ void shockwave(const char* q2_file)
 	//Set Parameters
 	Array partB;
 	initArray(&partB);
-	int solution = 1;
-	T = 0;
+	T = 0; //Starting Theta
 
-	partB = thetaSweep(M,T,B_u,B_l,G);
+	thetaSweep(&partB,M,T,B_u,B_l,G);
 
 	if(DEBUG_SHOCKWAVE){
 		for(int i=0;i<partB.used;i++){
@@ -79,6 +78,39 @@ void shockwave(const char* q2_file)
 	}
 
 	freeArray(&partB);
+
+	//PartC
+	//Check Headings
+	fscanf(data_in, "%s",headings);
+	if(strcmp(headings,"M")!=0){
+		printf("Incorrect data format - expecting <M>\n");
+		printf("Data is in %s\n",headings);
+		return;
+	}
+
+	float mVals[100];
+	int i = 0;
+	float tempM;
+	while(fscanf(data_in,"%f",&tempM) > 0){
+		mVals[i] = tempM;
+		i++;
+		printf("%f\n",tempM);
+	}
+
+	Array partC;
+	initArray(&partC);
+
+	for(int j=0;j<i;j++){
+		thetaSweep(&partC,mVals[j],T,B_u,B_l,G);
+	}
+
+	if(DEBUG_SHOCKWAVE){
+		for(int i=0;i<partC.used;i++){
+			printf("%f,%f,%f,%f\n",partC.array[i].M,partC.array[i].T,
+					partC.array[i].weak,partC.array[i].strong);
+		}
+	}
+
 
 	fclose(data_in);
 
@@ -197,9 +229,8 @@ void freeArray(Array *a)
     a->size = 0;
 }
 
-Array thetaSweep(float M, float T, float B_u, float B_l, float G){
+void thetaSweep(Array* results, float M, float T, float B_u, float B_l, float G){
 	int solution = 1;
-	Array results;
 	while(solution){
 		shockSolution temp;
 		temp.strong = NewtonRaphson(M,B_u,G,T);
@@ -208,12 +239,16 @@ Array thetaSweep(float M, float T, float B_u, float B_l, float G){
 		temp.T = T;
 
 		if(temp.strong != -1 && temp.weak != -1){
-			insertArray(&results,temp);
+			insertArray(results,temp);
 		}else{
 			solution = 0;
 		}
 		T++;
 	}
-	return results;
+	return;
+}
+
+float* readMvals(FILE* data_in){
+
 }
 
