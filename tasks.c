@@ -17,13 +17,13 @@
 #define BUFFER 50
 
 //DEBUG SWITCHES
-#define DEBUG_NEWTON_RAPHSON 1
-#define DEBUG_SHOCKWAVE 1
+#define DEBUG_NEWTON_RAPHSON 0
+#define DEBUG_SHOCKWAVE 0
+#define DEBUG_LINALSYS 0
+#define DEBUG_INTERP 1
 
 void shockwave(const char* q2_file)
 {
-    printf("shockwave - called\n");
-
     float B_l, B_u, M, T, G;
 
     //Open File
@@ -51,6 +51,12 @@ void shockwave(const char* q2_file)
 	partA.strong = NewtonRaphson(M,B_u,G,T);
 	partA.weak = NewtonRaphson(M,B_l,G,T);
 
+	printf("%f,%f,%f,%f\n",partA.M,partA.T,partA.weak,partA.strong);
+
+	if(DEBUG_SHOCKWAVE){
+		printf("Part A Complete\n");
+	}
+
 	//Part B
 	//Check Headings
 	fscanf(data_in, "%s",headings);
@@ -64,10 +70,11 @@ void shockwave(const char* q2_file)
 	fscanf(data_in,"%f",&M);
 
 	//Set Parameters
-	Array partB;
-	initArray(&partB);
+	shockArray partB;
+	initArray_shock(&partB);
 	T = 0; //Starting Theta
 
+	//Solve varying Theta Values
 	thetaSweep(&partB,M,T,B_u,B_l,G);
 
 	if(DEBUG_SHOCKWAVE){
@@ -77,7 +84,12 @@ void shockwave(const char* q2_file)
 		}
 	}
 
-	freeArray(&partB);
+
+	freeArray_shock(&partB);
+
+	if(DEBUG_SHOCKWAVE){
+		printf("Part B Complete\n");
+	}
 
 	//PartC
 	//Check Headings
@@ -88,20 +100,22 @@ void shockwave(const char* q2_file)
 		return;
 	}
 
-	float mVals[100];
-	int i = 0;
-	float tempM;
-	while(fscanf(data_in,"%f",&tempM) > 0){
-		mVals[i] = tempM;
-		i++;
-		printf("%f\n",tempM);
+	//Create Dynamic Array to store M values
+	floatArray mVals;
+	initArray_float(&mVals);
+	float temp;
+	while(fscanf(data_in,"%f",&temp) > 0){
+		insertArray_float(&mVals,temp);
 	}
 
-	Array partC;
-	initArray(&partC);
+	fclose(data_in);
 
-	for(int j=0;j<i;j++){
-		thetaSweep(&partC,mVals[j],T,B_u,B_l,G);
+	//Create Array to store shock solutions
+	shockArray partC;
+	initArray_shock(&partC);
+
+	for(int i=0;i<mVals.used;i++){
+		thetaSweep(&partC,mVals.array[i],T,B_u,B_l,G);
 	}
 
 	if(DEBUG_SHOCKWAVE){
@@ -111,30 +125,372 @@ void shockwave(const char* q2_file)
 		}
 	}
 
+	//Open output File
+	FILE* data_out;
+	data_out = fopen("out_shock.csv","w+");
 
-	fclose(data_in);
+	//Print to file
+	for(int i=0;i<partC.used;i++){
+		fprintf(data_out,"%f,%f,%f,%f\n",partC.array[i].M,partC.array[i].T,
+			partC.array[i].weak,partC.array[i].strong);
+	}
 
-	int noSolution = 0;
+	freeArray_shock(&partC);
+	freeArray_float(&mVals);
+
+	fclose(data_out);
+
+
+	if(DEBUG_SHOCKWAVE){
+		printf("Part C Complete\n");
+	}
 
 
 }
 
 void linalgbsys(const char* q4_file)
 {
-    printf("linalgbsys() - IMPLEMENT ME!\n");
-    exit(EXIT_FAILURE);
+
+    //Open File
+	FILE *data_in;
+	data_in = fopen(q4_file, "r");
+	assert(data_in!=NULL);
+	char headings[BUFFER];
+
+	//Initialise Arrays
+	floatArray A,B,C,Q,X;
+	initArray_float(&A);
+	initArray_float(&B);
+	initArray_float(&C);
+	initArray_float(&X);
+	initArray_float(&Q);
+
+	fscanf(data_in, "%s",headings);
+	if(strcmp(headings,"a,b,c,q")!=0){
+		printf("Incorrect data format - expecting <a,b,c,q>\n");
+		printf("Data is in %s\n",headings);
+		return;
+	}
+	float aTemp, bTemp, cTemp, qTemp;
+
+	while(fscanf(data_in,"%f,%f,%f,%f",&aTemp,&bTemp,&cTemp,&qTemp) > 0){
+		insertArray_float(&A, aTemp);
+		insertArray_float(&B, bTemp);
+		insertArray_float(&C, cTemp);
+		insertArray_float(&Q, qTemp);
+	}
+
+	if(DEBUG_LINALSYS){
+		for(int i = 0;i<A.used;i++){
+			printf("%f,%f,%f,%f\n",A.array[i],B.array[i],C.array[i],Q.array[i]);
+		}
+	}
+
+	thomasAlgorithm(&A,&B,&C,&Q,&X);
+
+	if(DEBUG_LINALSYS){
+		for(int i = 0;i<A.used;i++){
+			printf("%f\n",X.array[i]);
+		}
+	}
+
+	fclose(data_in);
+
+	//Free Memory
+	freeArray_float(&A);
+	freeArray_float(&B);
+	freeArray_float(&C);
+	freeArray_float(&Q);
+	freeArray_float(&X);
+
 }
 
 void interp(const char* q5_file, const double xo)
 {
-    printf("interp() - IMPLEMENT ME!\n");
-    exit(EXIT_FAILURE);
+    //Open File
+	FILE *data_in;
+	data_in = fopen(q5_file, "r");
+	assert(data_in!=NULL);
+	char headings[BUFFER];
+
+	//Read Headings
+	fscanf(data_in, "%s",headings);
+	if(strcmp(headings,"x,f(x)")!=0){
+		printf("Incorrect data format - expecting <x,f(x)\n");
+		printf("Data is in %s\n",headings);
+		return;
+	}
+
+	//Define Variables
+	floatArray x, y;
+	float xTemp, yTemp;
+	float target = 5;
+
+	//Initialise Arrays
+	initArray_float(&x);
+	initArray_float(&y);
+
+	//Scan in Data
+	while(fscanf(data_in,"%f,%f",&xTemp,&yTemp) > 0){
+		insertArray_float(&x,xTemp);
+		insertArray_float(&y,yTemp);
+	}
+
+	//DEBUG Print Data
+	if (DEBUG_INTERP) {
+		for(int i = 0; i<x.used; i++){
+			printf("%f, %f\n",x.array[i],y.array[i]);
+		}
+	}
+
+	float lagrangeEstimate = lagrangeInterp(x,y,target);
+	printf("\nlagrange\n%f\n",lagrangeEstimate);
+
+	float cubicSlineEstimate = cubicSplineInterp(x,y,target);
+	printf("\ncubic\n%f\n",cubicSlineEstimate);
+
+
+
+	//Free Arrarys
+	freeArray_float(&x);
+	freeArray_float(&y);
+
 }
 
 void waveeqn(const char* q6_file)
 {
     printf("heateqn() - IMPLEMENT ME!\n");
     exit(EXIT_FAILURE);
+}
+
+void tridiagonalCubicSplineGen(int n, float h[], float triMatrix[][n], float y[]){
+    int i;
+    for(i=0;i<n-1;i++){
+        triMatrix[i][i]=2*(h[i]+h[i+1]);
+    }
+    for(i=0;i<n-2;i++){
+        triMatrix[i][i+1]=h[i+1];
+        triMatrix[i+1][i]=h[i+1];
+    }
+    for(i=1;i<n;i++){
+        triMatrix[i-1][n-1]=(y[i+1]-y[i])*6/(float)h[i]-(y[i]-y[i-1])*6/(float)h[i-1];
+    }
+}
+
+float cubicSplineInterp(floatArray x, floatArray y, float target){
+	int n = x.used - 1;
+	float a[n]; //array to store the ai's
+	float b[n]; //array to store the bi's
+	float c[n]; //array to store the ci's
+	float d[n]; //array to store the di's
+	float h[n];
+	float sig[n+1]; //array to store Si's
+	float sigTemp[n-1]; //array to store the Si's except S0 and Sn
+
+	//Nature Spline
+	sig[0]=0;
+	sig[n]=0;
+
+	//Calculate Interval Values
+	intervalValues(n,h,x);
+
+	//Matrix to store the tridiagonal system of equations that will solve for Si's
+	float tri[n-1][n];
+	tridiagonalCubicSplineGen(n,h,tri,y.array); //to initialize tri[n-1][n]
+
+	//DEBUG Print Matrix
+	if (DEBUG_INTERP) {
+		printMatrix(n-1,n,tri);
+	}
+
+	//Wrapper function to apply Thomas Algorithm
+	thomasWrapper(n,tri,sigTemp);
+
+	//Merge Si's
+	for(int i=1;i<n;i++){
+		sig[i]=sigTemp[i-1];
+	}
+
+	//DEBUG Print Si's
+	if (DEBUG_INTERP) {
+		for(int i=0;i<n+1;i++){
+			printf("\nSig[%d] = %lf\n",i,sig[i]);
+		}
+	}
+
+	//Calculate Spline Coefficients
+	cSCoeffCalc(n,h,sig,y.array,a,b,c,d);
+
+	//DEBUG Print Spline Equations
+	if (DEBUG_INTERP) {
+		printf("\nThe equations of cubic interpolation polynomials between the successive intervals are:\n\n");
+		for(int i=0;i<n;i++){
+			printf("P%d(x) b/w [%f,%f] = %f*(x-%f)^3+%f*(x-%f)^2+%f*(x-%f)+%f\n",i,x.array[i],x.array[i+1],a[i],x.array[i],b[i],x.array[i],c[i],x.array[i],d[i]);
+		}
+	}
+
+	return interpolate(n,a,b,c,d,h,x.array,target);
+
+}
+
+float interpolate(int n, float a[], float b[], float c[], float d[], float h[], float x[], float target){
+
+	//Determine which spline region target resides in
+	int i = 0;
+
+	//Check Target is within interpolation range
+	if(target < x[0] || target > x[n]){
+		printf("Point is outside of spline interpolation range\n");
+		return 0;
+	}
+
+	while(target > h[i]){
+		i++;
+	}
+
+	return (a[i] + b[i]*(target-x[i]) + c[i]*pow((target-x[i]),2) + d[i]*pow((target - x[i]),3));
+
+}
+
+void cSCoeffCalc(int n, float h[], float sig[], float y[], float a[], float b[], float c[], float d[]){
+
+	int i;
+    for(i=0;i<n;i++){
+        d[i]=y[i];
+        b[i]=sig[i]/2.0;
+        a[i]=(sig[i+1]-sig[i])/(h[i]*6.0);
+        c[i]=(y[i+1]-y[i])/h[i]-h[i]*(2*sig[i]+sig[i+1])/6.0;
+//    	a[i] = y[i];
+//    	c[i] = sig[i];
+
+
+    }
+
+    if (DEBUG_INTERP) {
+		printf("a[]\t\tb[]\t\tc[]\t\td[]\t\ty[]\t\th[]\n");
+		for (int i = 0; i < n; ++i) {
+			printf("%f\t%f\t%f\t%f\t%f\t%f\n",a[i],b[i],c[i],d[i],y[i],h[i]);
+		}
+	}
+}
+
+void thomasWrapper(int n, float triMatrix[][n], float sigTemp[]){
+	//Initialise Arrays
+	floatArray A,B,C,Q,X;
+	initArray_float(&A);
+	initArray_float(&B);
+	initArray_float(&C);
+	initArray_float(&X);
+	initArray_float(&Q);
+
+	for(int i=0; i<n-1; i++){
+		insertArray_float(&A,triMatrix[i][i]);
+	}
+
+
+	for(int i=0; i<n-2; i++){
+		insertArray_float(&B,triMatrix[i][i+1]);
+	}
+
+	insertArray_float(&B,0);
+	insertArray_float(&C,0);
+
+	for(int i=0; i<n-2; i++){
+		insertArray_float(&C,triMatrix[i+1][i]);
+	}
+
+	for(int i=0; i<n-1; i++){
+		insertArray_float(&Q,triMatrix[i][n-1]);
+	}
+
+	thomasAlgorithm(&A,&B,&C,&Q,&X);
+
+	for(int i=0; i<n-1; i++){
+		sigTemp[i] = X.array[i];
+	}
+
+}
+
+void thomasAlgorithm(floatArray *A,floatArray *B,floatArray *C,floatArray *Q,floatArray *X){
+
+	//Initialise X
+	for(int i=0;i<A->used;i++){
+		insertArray_float(X,0.0);
+	}
+
+	//Forward Sweep
+	for(int i=1;i<A->used;i++){
+		A->array[i] = A->array[i] - (C->array[i]*B->array[i-1])/A->array[i-1];
+		Q->array[i] = Q->array[i] - (C->array[i]*Q->array[i-1])/A->array[i-1];
+	}
+
+
+	if (DEBUG_INTERP) {
+		printf("[Q,A]\n");
+		for(int i=0;i<A->used;i++){
+			printf("%f,%f\n",A->array[i],Q->array[i]);
+		}
+	}
+
+	//Solve Xn
+	X->array[X->used-1] = Q->array[Q->used-1]/A->array[A->used-1];
+
+	//Reverse Sweep
+	for(int i=X->used-2;i>=0;i--){
+		X->array[i] = (Q->array[i]-B->array[i]*X->array[i+1])/A->array[i];
+	}
+
+
+}
+
+void intervalValues(int n, float h[], floatArray x){
+
+	for(int i=0;i<n;i++){
+		h[i]=x.array[i+1]-x.array[i];
+	}
+
+	if (DEBUG_INTERP) {
+		printf("\nh[]\n");
+		for(int i = 0; i < n; i++) {
+			printf("%f\n",h[i]);
+		}
+	}
+}
+
+void printMatrix(int m, int n, float matrix[m][n]){
+    int i,j;
+    printf("\nTriBand Matrix\n");
+    for(i=0;i<m;i++){
+        for(j=0;j<n;j++){
+            printf("%f\t",matrix[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+float lagrangeInterp(floatArray x, floatArray y, float target){
+
+	float estimate = 0;
+
+	for(int i=0; i<x.used; i++)
+	{
+		estimate += lagrangeMultiplier(x,y,i,target)*y.array[i];
+	}
+	return estimate;
+}
+
+float lagrangeMultiplier(floatArray x_points,floatArray y_points,int i, float x){
+
+	float output =1;
+
+	for(int j=0; j<x_points.used; j++){
+		if(i!=j){
+			output *= (x-x_points.array[j])/(x_points.array[i]-x_points.array[j]);
+		}
+	}
+
+	return output;
 }
 
 float f(float M, float B, float T)
@@ -193,7 +549,7 @@ float NewtonRaphson(float M, float B, float G, float T){
 	return -1;
 }
 
-void initArray(Array *a)
+void initArray_shock(shockArray *a)
 {
     // Allocate initial space
     a->array = (shockSolution *)malloc(sizeof(shockSolution));
@@ -204,7 +560,7 @@ void initArray(Array *a)
 }
 
 // Add element to array
-void insertArray(Array *a, shockSolution element)
+void insertArray_shock(shockArray *a, shockSolution element)
 {
     if (a->used == a->size)
     {
@@ -218,7 +574,32 @@ void insertArray(Array *a, shockSolution element)
     a->used++;
 }
 
-void freeArray(Array *a)
+void initArray_float(floatArray *a)
+{
+    // Allocate initial space
+    a->array = (float*)malloc(sizeof(float));
+
+    a->used = 0; 	// no elements used
+    a->size = 1; 	// set initial size
+
+}
+
+// Add element to array
+void insertArray_float(floatArray *a, float element)
+{
+    if (a->used == a->size)
+    {
+        a->size *= 2;
+        a->array = (float *)realloc(a->array, a->size * sizeof(float));
+    }
+
+    // Add element
+    a->array[a->used] = element;
+
+    a->used++;
+}
+
+void freeArray_shock(shockArray *a)
 {
 
 	// Now free the array
@@ -229,7 +610,18 @@ void freeArray(Array *a)
     a->size = 0;
 }
 
-void thetaSweep(Array* results, float M, float T, float B_u, float B_l, float G){
+void freeArray_float(floatArray *a)
+{
+
+	// Now free the array
+    free(a->array);
+    a->array = NULL;
+
+    a->used = 0;
+    a->size = 0;
+}
+
+void thetaSweep(shockArray* results, float M, float T, float B_u, float B_l, float G){
 	int solution = 1;
 	while(solution){
 		shockSolution temp;
@@ -239,7 +631,7 @@ void thetaSweep(Array* results, float M, float T, float B_u, float B_l, float G)
 		temp.T = T;
 
 		if(temp.strong != -1 && temp.weak != -1){
-			insertArray(results,temp);
+			insertArray_shock(results,temp);
 		}else{
 			solution = 0;
 		}
@@ -248,7 +640,5 @@ void thetaSweep(Array* results, float M, float T, float B_u, float B_l, float G)
 	return;
 }
 
-float* readMvals(FILE* data_in){
 
-}
 
