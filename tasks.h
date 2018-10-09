@@ -87,4 +87,6 @@ void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx
 
 void updateArray(float fn[], float fn1[], int Nx);
 
+void laxWendroff(float fn[], float fn1[], float c, float dt, float dx, int Nx);
+
 #endif

@@ -283,11 +283,11 @@ void waveeqn(const char* q6_file)
 
 	//Open output File
 	FILE *data_out;
-	data_out = fopen("out_waveeqn.csv","w+");
+	data_out = fopen("out_waveeqn_EU.csv","w+");
 
 	//Define internal parameters
 	float dx = 1/(float)Nx;
-	float dt = 0.01;
+	float dt = 0.1;
 	float T = 10;
 	float fn[Nx+1];
 	float fn1[Nx+1];
@@ -298,7 +298,7 @@ void waveeqn(const char* q6_file)
 	//Save Data
 	exportArray(data_out,fn, Nx);
 
-	//Perform Upwinding
+	//Perform Euler with upwinding
 	float t = 0;
 
 	while(t<T){
@@ -308,9 +308,44 @@ void waveeqn(const char* q6_file)
 		t += dt;
 	}
 
-
+	//Close Output
 	fclose(data_out);
 
+	//Open output file for Lax-Wendroff
+
+	data_out = fopen("out_waveeqn_LW.csv","w+");
+
+	//Reset Array
+	initaliseFn(fn,dx);
+
+	//Save Data
+		exportArray(data_out,fn, Nx);
+
+	//Perform Lax–Wendroff
+	t = 0;
+
+	while(t<T){
+		laxWendroff(fn,fn1,c,dt,dx,Nx);
+		exportArray(data_out,fn1,Nx);
+		updateArray(fn,fn1,Nx);
+		t += dt;
+	}
+
+	//Close Output
+	fclose(data_out);
+
+}
+
+void laxWendroff(float fn[], float fn1[], float c, float dt, float dx, int Nx){
+
+	for(int i = 0; i<=Nx; i++){
+		if(i>0 && i<Nx)
+			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i]- fn[i-1]) + pow(c,2)*c*(pow(dt,2)/(2*pow(dx,2)))*(fn[i+1]-2*fn[i]+fn[i-1]);
+		else if(i==0) //Boundary Condition i = 0
+			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i]- fn[Nx]) + pow(c,2)*c*(pow(dt,2)/(2*pow(dx,2)))*(fn[i+1]-2*fn[i]+fn[Nx]);
+		else //Boundary Condition i = Nx
+			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i]- fn[i-1]) + pow(c,2)*c*(pow(dt,2)/(2*pow(dx,2)))*(fn[0]-2*fn[i]+fn[i-1]);
+	}
 }
 
 void updateArray(float fn[], float fn1[], int Nx){
@@ -320,12 +355,12 @@ void updateArray(float fn[], float fn1[], int Nx){
 }
 
 void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx){
-	//Solve with boundry condition
-	fn1[0] = fn[0] -c*(dt/dx)*(fn[0]- fn[Nx]);
 
-	//Solve for remaining points
-	for(int i = 1; i<=Nx; i++){
-		fn1[i] = fn[i] -c*(dt/dx)*(fn[i]- fn[i-1]);
+	for(int i = 0; i<=Nx; i++){
+		if(i>0)
+			fn1[i] = fn[i] -c*(dt/dx)*(fn[i]- fn[i-1]);
+		else //Boundary Condition
+			fn1[i] = fn[i] -c*(dt/dx)*(fn[i]- fn[Nx]);
 	}
 
 }
