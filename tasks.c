@@ -287,7 +287,7 @@ void waveeqn(const char* q6_file)
 
 	//Define internal parameters
 	float dx = 1/(float)Nx;
-	float dt = 0.01;
+	float dt = (CFL*dx)/c;
 	float T = 10;
 	float fn[Nx+1];
 	float fn1[Nx+1];
