@@ -17,7 +17,7 @@
 #define TASK2 1
 #define TASK3 1
 #define TASK4 1
-#define TASK5 0
+#define TASK5 1
 
 int main(int argc, char *argv[]) {
 	
@@ -26,8 +26,9 @@ int main(int argc, char *argv[]) {
 	char* q2_file = argv[1];
 	char* q4_file = argv[2];
 	char* q5_file = argv[3];
+	char* q6_file = argv[4];
+
 	double xo;
-	char* q6_file = NULL;
 
 	/* TODO: Add timing for each task and output running time in ms */
     
@@ -54,7 +55,9 @@ int main(int argc, char *argv[]) {
 	
 	/* Question 6 */
 	if (TASK5) {
+		printf("WaveEquation - Started\n\n");
 		waveeqn(q6_file);
+		printf("WaveEquation - Finished\n\n");
 	}
 
 	printf("All tasks Completed\n");

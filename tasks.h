@@ -79,4 +79,12 @@ void cSCoeffCalc(int n, float h[], float sig[], float y[], float a[], float b[],
 
 float interpolate(int n, float a[], float b[], float c[], float d[], float h[], float x[], float target);
 
+void initaliseFn(float fn[], float dx);
+
+void exportArray(FILE* data_out, float fn[], int Nx);
+
+void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx);
+
+void updateArray(float fn[], float fn1[], int Nx);
+
 #endif

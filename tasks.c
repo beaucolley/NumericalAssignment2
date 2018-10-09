@@ -15,6 +15,7 @@
 
 //Constants
 #define BUFFER 50
+#define PI 3.1415
 
 //DEBUG SWITCHES
 #define DEBUG_NEWTON_RAPHSON 0
@@ -259,8 +260,99 @@ void interp(const char* q5_file, const double xo)
 
 void waveeqn(const char* q6_file)
 {
-    printf("heateqn() - IMPLEMENT ME!\n");
-    exit(EXIT_FAILURE);
+	//Open File
+	FILE *data_in;
+	data_in = fopen(q6_file, "r");
+	assert(data_in!=NULL);
+	char headings[BUFFER];
+
+	//Read Headings
+	fscanf(data_in, "%s",headings);
+	if(strcmp(headings,"c,Nx,CFL,out_iter")!=0){
+		printf("Incorrect data format - expecting <c.Nx,CFL,out_iter>\n");
+		printf("Data is in %s\n",headings);
+		return;
+	}
+
+	//Define Variables for input parameters
+	float c, CFL, out_iter;
+	int Nx;
+	fscanf(data_in,"%f,%d,%f,%f",&c,&Nx,&CFL,&out_iter);
+
+	fclose(data_in);
+
+	//Open output File
+	FILE *data_out;
+	data_out = fopen("out_waveeqn.csv","w+");
+
+	//Define internal parameters
+	float dx = 1/(float)Nx;
+	float dt = 0.01;
+	float T = 10;
+	float fn[Nx+1];
+	float fn1[Nx+1];
+
+	//Initialise Array
+	initaliseFn(fn,dx);
+
+	//Save Data
+	exportArray(data_out,fn, Nx);
+
+	//Perform Upwinding
+	float t = 0;
+
+	while(t<T){
+		eulerUpwinding(fn,fn1,c,dt,dx,Nx);
+		exportArray(data_out,fn1,Nx);
+		updateArray(fn,fn1,Nx);
+		t += dt;
+	}
+
+
+	fclose(data_out);
+
+}
+
+void updateArray(float fn[], float fn1[], int Nx){
+	for (int i = 0; i <= Nx; ++i) {
+		fn[i] = fn1[i];
+	}
+}
+
+void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx){
+	//Solve with boundry condition
+	fn1[0] = fn[0] -c*(dt/dx)*(fn[0]- fn[Nx]);
+
+	//Solve for remaining points
+	for(int i = 1; i<=Nx; i++){
+		fn1[i] = fn[i] -c*(dt/dx)*(fn[i]- fn[i-1]);
+	}
+
+}
+
+void exportArray(FILE* data_out, float fn[], int Nx){
+	fprintf(data_out,"%f",fn[0]);
+	for (int i = 1; i <= Nx; ++i) {
+		fprintf(data_out,",%f",fn[i]);
+	}
+	fprintf(data_out,"\n");
+}
+
+void initaliseFn(float fn[], float dx){
+	float x = 0;
+	int i = 0;
+	while(x<=1){
+		if(x<0.125)
+			fn[i] = 0;
+		else if(x<=0.375)
+			fn[i] = 0.5*(1-cos(8*PI*(x-0.125)));
+		else if(x<=1)
+			fn[i] = 0;
+		else
+			printf("Initialise Out of Bounds\n");
+		i++;
+		x += dx;
+	}
 }
 
 void tridiagonalCubicSplineGen(int n, float h[], float triMatrix[][n], float y[]){
