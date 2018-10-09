@@ -287,7 +287,7 @@ void waveeqn(const char* q6_file)
 
 	//Define internal parameters
 	float dx = 1/(float)Nx;
-	float dt = 0.1;
+	float dt = 0.01;
 	float T = 10;
 	float fn[Nx+1];
 	float fn1[Nx+1];
@@ -340,11 +340,11 @@ void laxWendroff(float fn[], float fn1[], float c, float dt, float dx, int Nx){
 
 	for(int i = 0; i<=Nx; i++){
 		if(i>0 && i<Nx)
-			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i]- fn[i-1]) + pow(c,2)*c*(pow(dt,2)/(2*pow(dx,2)))*(fn[i+1]-2*fn[i]+fn[i-1]);
+			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i+1]- fn[i-1]) + pow(c,2)*(pow(dt,2)/(2*pow(dx,2)))*(fn[i+1]-2*fn[i]+fn[i-1]);
 		else if(i==0) //Boundary Condition i = 0
-			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i]- fn[Nx]) + pow(c,2)*c*(pow(dt,2)/(2*pow(dx,2)))*(fn[i+1]-2*fn[i]+fn[Nx]);
+			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i+1]- fn[Nx]) + pow(c,2)*(pow(dt,2)/(2*pow(dx,2)))*(fn[i+1]-2*fn[i]+fn[Nx]);
 		else //Boundary Condition i = Nx
-			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[i]- fn[i-1]) + pow(c,2)*c*(pow(dt,2)/(2*pow(dx,2)))*(fn[0]-2*fn[i]+fn[i-1]);
+			fn1[i] = fn[i] -c*(dt/(2*dx))*(fn[0]- fn[i-1]) + pow(c,2)*(pow(dt,2)/(2*pow(dx,2)))*(fn[0]-2*fn[i]+fn[i-1]);
 	}
 }
 
