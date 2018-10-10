@@ -21,7 +21,7 @@
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
 #define DEBUG_LINALSYS 0
-#define DEBUG_INTERP 0
+#define DEBUG_INTERP 1
 #define DEBUG_WAVE 0
 
 void shockwave(const char* q2_file)
@@ -300,6 +300,7 @@ void interp(const char* q5_file, float xo)
 		 cubicSplineTemp = cubicSplineInterp(x,y,j);
 		 fprintf(data_out,"%f,%f\n",lagrangeTemp,cubicSplineTemp);
 		 j = j + plotRes;
+		 printf("j = %f\n",j);
 	 }
 	 fclose(data_out);
 
