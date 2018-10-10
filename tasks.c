@@ -21,7 +21,7 @@
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
 #define DEBUG_LINALSYS 0
-#define DEBUG_INTERP 1
+#define DEBUG_INTERP 0
 #define DEBUG_WAVE 0
 
 void shockwave(const char* q2_file)
@@ -268,6 +268,10 @@ void interp(const char* q5_file, float xo)
 	FILE* data_out;
 	data_out = fopen("out_interp.csv","w+");
 
+	if (DEBUG_INTERP) {
+		printf("xo = %f\n",xo);
+	}
+
 	//Lagrangian Estimate
 	float lagrangeEstimate = lagrangeInterp(x,y,xo);
 	fprintf(data_out,"\nlagrange\n%f\n",lagrangeEstimate);
@@ -430,11 +434,9 @@ void initaliseFn(float fn[], float dx){
 //Generates a Tridiagnol matrix based of input parameters.
 void tridiagonalCubicSplineGen(int n, float h[], float triMatrix[][n], float y[]){
     int i;
-		triMatrix[0][0] = 1;
-    for(i=1;i<n-1;i++){
+    for(i=0;i<n-1;i++){
         triMatrix[i][i]=2*(h[i]+h[i+1]);
     }
-		triMatrix[n]
     for(i=0;i<n-2;i++){
         triMatrix[i][i+1]=h[i+1];
         triMatrix[i+1][i]=h[i+1];
@@ -457,44 +459,72 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 	float c[n];
 	float d[n];
 	float h[n];
-	float sig[n+1];
-	float sigTemp[n-1];
 
-	//Nature Spline
-	sig[0]=0;
-	sig[n]=0;
-
-	//Calculate Interval Values
+	//Calculate h coefficients Values
 	intervalValues(n,h,x);
 
-	//Matrix to store the tridiagonal system of equations that will solve for Si's
-	float tri[n-1][n];
-
-	//Generate Matrix
-	tridiagonalCubicSplineGen(n,h,tri,y.array);
-
-	//DEBUG Print Matrix
-	if (DEBUG_INTERP) {
-		printMatrix(n-1,n,tri);
+	//Set a coefficients
+	for (int i = 0; i < y.used; ++i) {
+		a[i] = y.array[i];
 	}
 
-	//Wrapper function to apply Thomas Algorithm
-	thomasWrapper(n,tri,sigTemp);
+	//Generate Arrays for tri_diag matrix
+	floatArray A,B,C,Q,X;
+	initArray_float(&A);
+	initArray_float(&B);
+	initArray_float(&C);
+	initArray_float(&Q);
+	initArray_float(&X);
 
-	//Merge Si's
-	for(int i=1;i<n;i++){
-		sig[i]=sigTemp[i-1];
-	}
-
-	//DEBUG Print Si's
-	if (DEBUG_INTERP) {
-		for(int i=0;i<n+1;i++){
-			printf("\nSig[%d] = %lf\n",i,sig[i]);
+	//Set A array
+	for(int i = 0; i<y.used ;i++){
+		if(i == 0 || i == y.used-1){
+			insertArray_float(&A,1);
+		}else{
+			float tempA = 2*(h[i-1]+h[i]);
+			insertArray_float(&A,tempA);
 		}
 	}
 
-	//Calculate Spline Coefficients
-	cSCoeffCalc(n,h,sig,y.array,a,b,c,d);
+	//Set C array
+	for (int i = 0; i < x.used - 2; ++i) {
+		insertArray_float(&C,h[i]);
+	}
+	insertArray_float(&C,0);
+
+	//Set B array
+	insertArray_float(&B,0);
+	for (int i = 0; i < x.used - 1; ++i) {
+		insertArray_float(&B,h[i]);
+	}
+
+	//Set Q array
+	insertArray_float(&Q,0); //Natural Spline Condition
+	for (int i = 0; i < x.used-2; ++i) {
+		insertArray_float(&Q,(3/h[i+1])*(a[i+2]-a[i+1])+(3/h[i])*(a[i]-a[i+1]));
+	}
+	insertArray_float(&Q,0); //Natural Spline Condition
+
+
+	//Run Thomas Algorithm
+	thomasAlgorithm(&A,&B,&C,&Q,&X);
+
+	//Set c coefficients
+	for(int i=1;i<n;i++){
+		c[i]=X.array[i];
+	}
+
+	//Set b coefficients
+
+	for (int i = 0; i < x.used-1; ++i) {
+		b[i] = (1/h[i])*(a[i+1]-a[i])-(h[i]/3)*(2*c[i]+c[i+1]);
+	}
+
+	//Set d coefficients
+
+	for (int i = 0; i < x.used - 1; ++i) {
+		d[i] = (c[i+1]-c[i])/3*h[i];
+	}
 
 	//DEBUG Print Spline Equations
 	if (DEBUG_INTERP) {
@@ -503,6 +533,13 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 			printf("P%d(x) b/w [%f,%f] = %f + %f(x-%f) + %f(x - %f)^2 + %f(x-%f)^3\n",i,x.array[i],x.array[i+1],a[i],b[i],x.array[i],c[i],x.array[i],d[i],x.array[i]);
 		}
 	}
+
+	//Free Memory
+	freeArray_float(&A);
+	freeArray_float(&B);
+	freeArray_float(&C);
+	freeArray_float(&Q);
+	freeArray_float(&X);
 
 	return interpolate(n,a,b,c,d,h,x.array,target);
 
@@ -527,84 +564,6 @@ float interpolate(int n, float a[], float b[], float c[], float d[], float h[], 
 	//Return Value
 	return (a[i] + b[i]*(target-x[i]) + c[i]*pow((target-x[i]),2) + d[i]*pow((target - x[i]),3));
 
-}
-
-//Calculates cubic spline coefficients
-void cSCoeffCalc(int n, float h[], float sig[], float y[], float a[], float b[], float c[], float d[]){
-
-	int i;
-    for(i=0;i<n;i++){
-        // d[i]=y[i];
-        // b[i]=sig[i]/2.0;
-        // a[i]=(sig[i+1]-sig[i])/(h[i]*6.0);
-        // c[i]=(y[i+1]-y[i])/h[i]-h[i]*(2*sig[i]+sig[i+1])/6.0;
-	   	a[i] = y[i];
-	   	c[i] = sig[i];
-    }
-		for(i=0;i<n;i++){
-			b[i] = (1/h[i])*(a[i+1]-a[i])-(h[i]/3)*(2*c[i]+c[i+1]);
-			d[i] = (c[i+1]-c[i])/(3*h[i]);
-		}
-
-    if (DEBUG_INTERP) {
-		printf("a[]\t\tb[]\t\tc[]\t\td[]\t\ty[]\t\th[]\n");
-		for (int i = 0; i < n; ++i) {
-			printf("%f\t%f\t%f\t%f\t%f\t%f\n",a[i],b[i],c[i],d[i],y[i],h[i]);
-		}
-	}
-}
-
-/*This wrapper allows my previous implementation of the Thomas Algorithm which
- * takes in custom array structures to be called with a 2D matrix. I decided to
- * do this because I found parts of the cubic spline program easier to implement
- * with standard float arrays and some online references to generate 2D matrices*/
-void thomasWrapper(int n, float triMatrix[][n], float sigTemp[]){
-	//Initialise Arrays
-	floatArray A,B,C,Q,X;
-	initArray_float(&A);
-	initArray_float(&B);
-	initArray_float(&C);
-	initArray_float(&X);
-	initArray_float(&Q);
-
-	//Create A Array
-	for(int i=0; i<n-1; i++){
-		insertArray_float(&A,triMatrix[i][i]);
-	}
-
-	//Create B Array
-	for(int i=0; i<n-2; i++){
-		insertArray_float(&B,triMatrix[i][i+1]);
-	}
-
-	//Insert zero elenments into B and C arrays
-	insertArray_float(&B,0);
-	insertArray_float(&C,0);
-
-	//Create C Array
-	for(int i=0; i<n-2; i++){
-		insertArray_float(&C,triMatrix[i+1][i]);
-	}
-
-	//Create Q Array
-	for(int i=0; i<n-1; i++){
-		insertArray_float(&Q,triMatrix[A][n-1]);
-	}
-
-	//Run Thomas Algorithm
-	thomasAlgorithm(&A,&B,&C,&Q,&X);
-
-	//Copy Results into Sigma Array
-	for(int i=0; i<n-1; i++){
-		sigTemp[i] = X.array[i];
-	}
-
-	//Free Memory
-	freeArray_float(&A);
-	freeArray_float(&B);
-	freeArray_float(&C);
-	freeArray_float(&Q);
-	freeArray_float(&X);
 }
 
 //Function to Implement Thomas Algorithm
