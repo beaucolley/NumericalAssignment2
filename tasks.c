@@ -21,7 +21,7 @@
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
 #define DEBUG_LINALSYS 0
-#define DEBUG_INTERP 0
+#define DEBUG_INTERP 1
 #define DEBUG_WAVE 0
 
 void shockwave(const char* q2_file)
@@ -278,7 +278,7 @@ void interp(const char* q5_file, float xo)
 
 	//Cubic Spline Estimate
 	float cubicSlineEstimate = cubicSplineInterp(x,y,xo);
-	fprintf(data_out,"\nCubic\n%f\n",lagrangeEstimate);
+	fprintf(data_out,"\nCubic\n%f\n",cubicSlineEstimate);
 
 	if (DEBUG_INTERP) {
 		printf("\ncubic\n%f\n",cubicSlineEstimate);
@@ -430,9 +430,11 @@ void initaliseFn(float fn[], float dx){
 //Generates a Tridiagnol matrix based of input parameters.
 void tridiagonalCubicSplineGen(int n, float h[], float triMatrix[][n], float y[]){
     int i;
-    for(i=0;i<n-1;i++){
+		triMatrix[0][0] = 1;
+    for(i=1;i<n-1;i++){
         triMatrix[i][i]=2*(h[i]+h[i+1]);
     }
+		triMatrix[n]
     for(i=0;i<n-2;i++){
         triMatrix[i][i+1]=h[i+1];
         triMatrix[i+1][i]=h[i+1];
@@ -498,7 +500,7 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 	if (DEBUG_INTERP) {
 		printf("\nThe equations of cubic interpolation polynomials between the successive intervals are:\n\n");
 		for(int i=0;i<n;i++){
-			printf("P%d(x) b/w [%f,%f] = %f*(x-%f)^3+%f*(x-%f)^2+%f*(x-%f)+%f\n",i,x.array[i],x.array[i+1],a[i],x.array[i],b[i],x.array[i],c[i],x.array[i],d[i]);
+			printf("P%d(x) b/w [%f,%f] = %f + %f(x-%f) + %f(x - %f)^2 + %f(x-%f)^3\n",i,x.array[i],x.array[i+1],a[i],b[i],x.array[i],c[i],x.array[i],d[i],x.array[i]);
 		}
 	}
 
@@ -532,15 +534,17 @@ void cSCoeffCalc(int n, float h[], float sig[], float y[], float a[], float b[],
 
 	int i;
     for(i=0;i<n;i++){
-        d[i]=y[i];
-        b[i]=sig[i]/2.0;
-        a[i]=(sig[i+1]-sig[i])/(h[i]*6.0);
-        c[i]=(y[i+1]-y[i])/h[i]-h[i]*(2*sig[i]+sig[i+1])/6.0;
-//    	a[i] = y[i];
-//    	c[i] = sig[i];
-
-
+        // d[i]=y[i];
+        // b[i]=sig[i]/2.0;
+        // a[i]=(sig[i+1]-sig[i])/(h[i]*6.0);
+        // c[i]=(y[i+1]-y[i])/h[i]-h[i]*(2*sig[i]+sig[i+1])/6.0;
+	   	a[i] = y[i];
+	   	c[i] = sig[i];
     }
+		for(i=0;i<n;i++){
+			b[i] = (1/h[i])*(a[i+1]-a[i])-(h[i]/3)*(2*c[i]+c[i+1]);
+			d[i] = (c[i+1]-c[i])/(3*h[i]);
+		}
 
     if (DEBUG_INTERP) {
 		printf("a[]\t\tb[]\t\tc[]\t\td[]\t\ty[]\t\th[]\n");
@@ -584,7 +588,7 @@ void thomasWrapper(int n, float triMatrix[][n], float sigTemp[]){
 
 	//Create Q Array
 	for(int i=0; i<n-1; i++){
-		insertArray_float(&Q,triMatrix[i][n-1]);
+		insertArray_float(&Q,triMatrix[A][n-1]);
 	}
 
 	//Run Thomas Algorithm
@@ -858,6 +862,3 @@ void thetaSweep(shockArray* results, float M, float T, float B_u, float B_l, flo
 	}
 	return;
 }
-
-
-
