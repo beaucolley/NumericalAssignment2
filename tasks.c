@@ -289,15 +289,19 @@ void interp(const char* q5_file, float xo)
 	}
 	fclose(data_out);
 
-	//Output data plots
-	// data_out = fopen("out_interp_plot.csv","w+");
-	// int plotRes = 0.1;
-	// for(int i = 0; i<x.array[x.used-1] ; i+=plotRes){
-	// 	float lagrangeTemp =  lagrangeInterp(x,y,i);
-	// 	float cubicSpineTemp = cubicSplineInterp(x,y,xo);
-	// 	fprintf(data_out,"%f,%f\n",lagrangeTemp,cubicSpineTemp);
-	// }
-	// fclose(data_out);
+//	Output data plots
+	 data_out = fopen("out_interp_plot.csv","w+");
+	 float plotRes = 0.1;
+	 float j = 0;
+	 float lagrangeTemp, cubicSplineTemp;
+
+	 while(j<x.array[x.used-1]){
+		 lagrangeTemp = lagrangeInterp(x,y,j);
+		 cubicSplineTemp = cubicSplineInterp(x,y,j);
+		 fprintf(data_out,"%f,%f\n",lagrangeTemp,cubicSplineTemp);
+		 j = j + plotRes;
+	 }
+	 fclose(data_out);
 
 	//Free Arrarys
 	freeArray_float(&x);
