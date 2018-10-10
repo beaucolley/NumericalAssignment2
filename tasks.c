@@ -21,7 +21,7 @@
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
 #define DEBUG_LINALSYS 0
-#define DEBUG_INTERP 1
+#define DEBUG_INTERP 0
 #define DEBUG_WAVE 0
 
 void shockwave(const char* q2_file)
@@ -300,7 +300,9 @@ void interp(const char* q5_file, float xo)
 		 cubicSplineTemp = cubicSplineInterp(x,y,j);
 		 fprintf(data_out,"%f,%f\n",lagrangeTemp,cubicSplineTemp);
 		 j = j + plotRes;
-		 printf("j = %f\n",j);
+		if (DEBUG_INTERP) {
+			printf("j = %f\n",j);
+		}
 	 }
 	 fclose(data_out);
 
@@ -334,7 +336,7 @@ void waveeqn(const char* q6_file)
 
 	//Open output File
 	FILE *data_out;
-	data_out = fopen("out_waveeqn_EU.csv","w+");
+	data_out = fopen("out_waveeqn_EU_N200_CFL_1.001.csv","w+");
 
 	//Define internal parameters
 	float dx = 1/(float)Nx;
@@ -363,7 +365,7 @@ void waveeqn(const char* q6_file)
 	fclose(data_out);
 
 	//Open output file for Lax-Wendroff
-	data_out = fopen("out_waveeqn_LW.csv","w+");
+	data_out = fopen("out_waveeqn_LW_N200_CFL_1.001.csv","w+");
 
 	//Reset Array
 	initaliseFn(fn,dx);
