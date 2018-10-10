@@ -15,13 +15,14 @@
 
 //Constants
 #define BUFFER 50
-#define PI 3.1415
+#define PI 3.14159265359
 
 //DEBUG SWITCHES
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
 #define DEBUG_LINALSYS 0
-#define DEBUG_INTERP 1
+#define DEBUG_INTERP 0
+#define DEBUG_WAVE 0
 
 void shockwave(const char* q2_file)
 {
@@ -52,7 +53,9 @@ void shockwave(const char* q2_file)
 	partA.strong = NewtonRaphson(M,B_u,G,T);
 	partA.weak = NewtonRaphson(M,B_l,G,T);
 
-	printf("%f,%f,%f,%f\n",partA.M,partA.T,partA.weak,partA.strong);
+	if (DEBUG_SHOCKWAVE) {
+		printf("%f,%f,%f,%f\n",partA.M,partA.T,partA.weak,partA.strong);
+	}
 
 	if(DEBUG_SHOCKWAVE){
 		printf("Part A Complete\n");
@@ -129,10 +132,11 @@ void shockwave(const char* q2_file)
 	//Open output File
 	FILE* data_out;
 	data_out = fopen("out_shock.csv","w+");
+	fprintf(data_out,"M,theta,beta_ l,beta_u,gamma\n");
 
 	//Print to file
 	for(int i=0;i<partC.used;i++){
-		fprintf(data_out,"%f,%f,%f,%f\n",partC.array[i].M,partC.array[i].T,
+		fprintf(data_out,"%f,%d,%f,%f\n",partC.array[i].M,(int)partC.array[i].T,
 			partC.array[i].weak,partC.array[i].strong);
 	}
 
@@ -166,14 +170,18 @@ void linalgbsys(const char* q4_file)
 	initArray_float(&X);
 	initArray_float(&Q);
 
+	//Process Headings
 	fscanf(data_in, "%s",headings);
 	if(strcmp(headings,"a,b,c,q")!=0){
 		printf("Incorrect data format - expecting <a,b,c,q>\n");
 		printf("Data is in %s\n",headings);
 		return;
 	}
+
+	//Declare temp holding variables
 	float aTemp, bTemp, cTemp, qTemp;
 
+	//Scan in variables
 	while(fscanf(data_in,"%f,%f,%f,%f",&aTemp,&bTemp,&cTemp,&qTemp) > 0){
 		insertArray_float(&A, aTemp);
 		insertArray_float(&B, bTemp);
@@ -181,21 +189,31 @@ void linalgbsys(const char* q4_file)
 		insertArray_float(&Q, qTemp);
 	}
 
+	fclose(data_in);
+
+	//DEBUG Print Array
 	if(DEBUG_LINALSYS){
 		for(int i = 0;i<A.used;i++){
 			printf("%f,%f,%f,%f\n",A.array[i],B.array[i],C.array[i],Q.array[i]);
 		}
 	}
 
+	//Perform ThomasAlgorithm
 	thomasAlgorithm(&A,&B,&C,&Q,&X);
 
-	if(DEBUG_LINALSYS){
-		for(int i = 0;i<A.used;i++){
-			printf("%f\n",X.array[i]);
-		}
+	//Open output File
+	FILE* data_out;
+	data_out = fopen("out_linalsys.csv","w+");
+	fprintf(data_out,"X\n");
+
+	//Export Results
+	for(int i = 0;i<A.used;i++){
+		fprintf(data_out,"%f\n",X.array[i]);
 	}
 
-	fclose(data_in);
+	//Close output File
+	fclose(data_out);
+
 
 	//Free Memory
 	freeArray_float(&A);
@@ -206,7 +224,7 @@ void linalgbsys(const char* q4_file)
 
 }
 
-void interp(const char* q5_file, const double xo)
+void interp(const char* q5_file, float xo)
 {
     //Open File
 	FILE *data_in;
@@ -225,7 +243,6 @@ void interp(const char* q5_file, const double xo)
 	//Define Variables
 	floatArray x, y;
 	float xTemp, yTemp;
-	float target = 5;
 
 	//Initialise Arrays
 	initArray_float(&x);
@@ -237,6 +254,9 @@ void interp(const char* q5_file, const double xo)
 		insertArray_float(&y,yTemp);
 	}
 
+	//Close Input File
+	fclose(data_in);
+
 	//DEBUG Print Data
 	if (DEBUG_INTERP) {
 		for(int i = 0; i<x.used; i++){
@@ -244,18 +264,31 @@ void interp(const char* q5_file, const double xo)
 		}
 	}
 
-	float lagrangeEstimate = lagrangeInterp(x,y,target);
-	printf("\nlagrange\n%f\n",lagrangeEstimate);
+	//Open output File
+	FILE* data_out;
+	data_out = fopen("out_interp.csv","w+");
 
-	float cubicSlineEstimate = cubicSplineInterp(x,y,target);
-	printf("\ncubic\n%f\n",cubicSlineEstimate);
+	//Lagrangian Estimate
+	float lagrangeEstimate = lagrangeInterp(x,y,xo);
+	fprintf(data_out,"\nlagrange\n%f\n",lagrangeEstimate);
 
+	if (DEBUG_INTERP) {
+		printf("\nlagrange\n%f\n",lagrangeEstimate);
+	}
 
+	//Cubic Spline Estimate
+	float cubicSlineEstimate = cubicSplineInterp(x,y,xo);
+	fprintf(data_out,"\nCubic\n%f\n",lagrangeEstimate);
+
+	if (DEBUG_INTERP) {
+		printf("\ncubic\n%f\n",cubicSlineEstimate);
+	}
+
+	fclose(data_out);
 
 	//Free Arrarys
 	freeArray_float(&x);
 	freeArray_float(&y);
-
 }
 
 void waveeqn(const char* q6_file)
@@ -312,7 +345,6 @@ void waveeqn(const char* q6_file)
 	fclose(data_out);
 
 	//Open output file for Lax-Wendroff
-
 	data_out = fopen("out_waveeqn_LW.csv","w+");
 
 	//Reset Array
@@ -336,6 +368,7 @@ void waveeqn(const char* q6_file)
 
 }
 
+//LaxWendolf Method
 void laxWendroff(float fn[], float fn1[], float c, float dt, float dx, int Nx){
 
 	for(int i = 0; i<=Nx; i++){
@@ -348,12 +381,14 @@ void laxWendroff(float fn[], float fn1[], float c, float dt, float dx, int Nx){
 	}
 }
 
+//Copy fn1 array to fn array for next step
 void updateArray(float fn[], float fn1[], int Nx){
 	for (int i = 0; i <= Nx; ++i) {
 		fn[i] = fn1[i];
 	}
 }
 
+//Euler Upwinding Method
 void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx){
 
 	for(int i = 0; i<=Nx; i++){
@@ -365,7 +400,8 @@ void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx
 
 }
 
-void exportArray(FILE* data_out, float fn[], int Nx){
+//Export Array to data_out
+void exportArray(FILE *data_out, float fn[], int Nx){
 	fprintf(data_out,"%f",fn[0]);
 	for (int i = 1; i <= Nx; ++i) {
 		fprintf(data_out,",%f",fn[i]);
@@ -373,6 +409,7 @@ void exportArray(FILE* data_out, float fn[], int Nx){
 	fprintf(data_out,"\n");
 }
 
+//Initialise Fn array for wave equation
 void initaliseFn(float fn[], float dx){
 	float x = 0;
 	int i = 0;
@@ -390,6 +427,7 @@ void initaliseFn(float fn[], float dx){
 	}
 }
 
+//Generates a Tridiagnol matrix based of input parameters.
 void tridiagonalCubicSplineGen(int n, float h[], float triMatrix[][n], float y[]){
     int i;
     for(i=0;i<n-1;i++){
@@ -405,14 +443,20 @@ void tridiagonalCubicSplineGen(int n, float h[], float triMatrix[][n], float y[]
 }
 
 float cubicSplineInterp(floatArray x, floatArray y, float target){
+	/*This method for cubic spline interpolation is bases of a method outline in
+	https://www.bragitoff.com/2018/02/cubic-spline-piecewise-interpolation-c-program/*/
+
+
 	int n = x.used - 1;
-	float a[n]; //array to store the ai's
-	float b[n]; //array to store the bi's
-	float c[n]; //array to store the ci's
-	float d[n]; //array to store the di's
+
+	//Define Arrays to store Spline Parameters
+	float a[n];
+	float b[n];
+	float c[n];
+	float d[n];
 	float h[n];
-	float sig[n+1]; //array to store Si's
-	float sigTemp[n-1]; //array to store the Si's except S0 and Sn
+	float sig[n+1];
+	float sigTemp[n-1];
 
 	//Nature Spline
 	sig[0]=0;
@@ -423,7 +467,9 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 
 	//Matrix to store the tridiagonal system of equations that will solve for Si's
 	float tri[n-1][n];
-	tridiagonalCubicSplineGen(n,h,tri,y.array); //to initialize tri[n-1][n]
+
+	//Generate Matrix
+	tridiagonalCubicSplineGen(n,h,tri,y.array);
 
 	//DEBUG Print Matrix
 	if (DEBUG_INTERP) {
@@ -460,9 +506,10 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 
 }
 
+//Return interpolated value for cubic spline
 float interpolate(int n, float a[], float b[], float c[], float d[], float h[], float x[], float target){
 
-	//Determine which spline region target resides in
+
 	int i = 0;
 
 	//Check Target is within interpolation range
@@ -470,15 +517,17 @@ float interpolate(int n, float a[], float b[], float c[], float d[], float h[], 
 		printf("Point is outside of spline interpolation range\n");
 		return 0;
 	}
-
+	//Determine which spline region target resides in
 	while(target > h[i]){
 		i++;
 	}
 
+	//Return Value
 	return (a[i] + b[i]*(target-x[i]) + c[i]*pow((target-x[i]),2) + d[i]*pow((target - x[i]),3));
 
 }
 
+//Calculates cubic spline coefficients
 void cSCoeffCalc(int n, float h[], float sig[], float y[], float a[], float b[], float c[], float d[]){
 
 	int i;
@@ -501,6 +550,10 @@ void cSCoeffCalc(int n, float h[], float sig[], float y[], float a[], float b[],
 	}
 }
 
+/*This wrapper allows my previous implementation of the Thomas Algorithm which
+ * takes in custom array structures to be called with a 2D matrix. I decided to
+ * do this because I found parts of the cubic spline program easier to implement
+ * with standard float arrays and some online references to generate 2D matrices*/
 void thomasWrapper(int n, float triMatrix[][n], float sigTemp[]){
 	//Initialise Arrays
 	floatArray A,B,C,Q,X;
@@ -510,34 +563,47 @@ void thomasWrapper(int n, float triMatrix[][n], float sigTemp[]){
 	initArray_float(&X);
 	initArray_float(&Q);
 
+	//Create A Array
 	for(int i=0; i<n-1; i++){
 		insertArray_float(&A,triMatrix[i][i]);
 	}
 
-
+	//Create B Array
 	for(int i=0; i<n-2; i++){
 		insertArray_float(&B,triMatrix[i][i+1]);
 	}
 
+	//Insert zero elenments into B and C arrays
 	insertArray_float(&B,0);
 	insertArray_float(&C,0);
 
+	//Create C Array
 	for(int i=0; i<n-2; i++){
 		insertArray_float(&C,triMatrix[i+1][i]);
 	}
 
+	//Create Q Array
 	for(int i=0; i<n-1; i++){
 		insertArray_float(&Q,triMatrix[i][n-1]);
 	}
 
+	//Run Thomas Algorithm
 	thomasAlgorithm(&A,&B,&C,&Q,&X);
 
+	//Copy Results into Sigma Array
 	for(int i=0; i<n-1; i++){
 		sigTemp[i] = X.array[i];
 	}
 
+	//Free Memory
+	freeArray_float(&A);
+	freeArray_float(&B);
+	freeArray_float(&C);
+	freeArray_float(&Q);
+	freeArray_float(&X);
 }
 
+//Function to Implement Thomas Algorithm
 void thomasAlgorithm(floatArray *A,floatArray *B,floatArray *C,floatArray *Q,floatArray *X){
 
 	//Initialise X
@@ -552,7 +618,7 @@ void thomasAlgorithm(floatArray *A,floatArray *B,floatArray *C,floatArray *Q,flo
 	}
 
 
-	if (DEBUG_INTERP) {
+	if (DEBUG_LINALSYS) {
 		printf("[Q,A]\n");
 		for(int i=0;i<A->used;i++){
 			printf("%f,%f\n",A->array[i],Q->array[i]);
@@ -570,12 +636,13 @@ void thomasAlgorithm(floatArray *A,floatArray *B,floatArray *C,floatArray *Q,flo
 
 }
 
+//Method to calculate the interval values between interpolation points
 void intervalValues(int n, float h[], floatArray x){
 
 	for(int i=0;i<n;i++){
 		h[i]=x.array[i+1]-x.array[i];
 	}
-
+	//DEBUG - Print interval Values
 	if (DEBUG_INTERP) {
 		printf("\nh[]\n");
 		for(int i = 0; i < n; i++) {
@@ -584,6 +651,7 @@ void intervalValues(int n, float h[], floatArray x){
 	}
 }
 
+//Function to print 2D matrix to console
 void printMatrix(int m, int n, float matrix[m][n]){
     int i,j;
     printf("\nTriBand Matrix\n");
@@ -596,6 +664,7 @@ void printMatrix(int m, int n, float matrix[m][n]){
     printf("\n");
 }
 
+//Function to do Lagrangian interpolation
 float lagrangeInterp(floatArray x, floatArray y, float target){
 
 	float estimate = 0;
@@ -607,6 +676,7 @@ float lagrangeInterp(floatArray x, floatArray y, float target){
 	return estimate;
 }
 
+//Function to calculate Lagrangian Multiplier
 float lagrangeMultiplier(floatArray x_points,floatArray y_points,int i, float x){
 
 	float output =1;
@@ -620,6 +690,7 @@ float lagrangeMultiplier(floatArray x_points,floatArray y_points,int i, float x)
 	return output;
 }
 
+//Evaluate function for a particular M, Beta and Theta, for NewtonRaphson
 float f(float M, float B, float T)
 {
 	float G = 1.4;
@@ -629,6 +700,7 @@ float f(float M, float B, float T)
     return (2/tan(B))*(X/Y)-tan(T);
 }
 
+//Evaluate derivative of function at a particulat M, Beta and Theta, for NewtonRaphson
 float df (float M, float B, float T, float G)
 {
 	return (2*(2*pow(M,2)*pow(cos(B),2)*(2+pow(M,2)*(G+cos(2*B)))-
@@ -636,21 +708,32 @@ float df (float M, float B, float T, float G)
 			2*pow(M,2)*(cos(B)/sin(B))*(-1+pow(M,2)*pow(sin(B),2))*sin(2*B)))/
 			pow((2+pow(M,2)*(G+cos(2*B))),2);
 }
+
+//Function to convert Degrees to Radians
 float DegtoRad(float degrees){
-	return degrees*(M_PI/180);
+	return degrees*(PI/180);
 }
+
+//Function to convert Radians to Degrees
 float RadtoDeg(float rad){
-	return rad*(180/M_PI);
+	return rad*(180/PI);
 }
+
+//Implement Newton Raphson root finding
 float NewtonRaphson(float M, float B, float G, float T){
 
+	//Define internal variables
 	int itr;
-	int maxmitr = 100;
 	float h, x1;
+
+	//Max iterations and allowed error
+	int maxmitr = 100;
 	float allerr = 0.01;
 
+	//Convert input to radians
 	T = DegtoRad(T);
 	B = DegtoRad(B);
+
 
 	for (itr=1; itr<=maxmitr; itr++)
 	{
@@ -676,6 +759,7 @@ float NewtonRaphson(float M, float B, float G, float T){
 	return -1;
 }
 
+//Initialise dynamic array to store solution for shock equation
 void initArray_shock(shockArray *a)
 {
     // Allocate initial space
@@ -689,8 +773,10 @@ void initArray_shock(shockArray *a)
 // Add element to array
 void insertArray_shock(shockArray *a, shockSolution element)
 {
+	//Check if array is full
     if (a->used == a->size)
     {
+    	//If full double size and realloc space
         a->size *= 2;
         a->array = (shockSolution *)realloc(a->array, a->size * sizeof(shockSolution));
     }
@@ -701,6 +787,7 @@ void insertArray_shock(shockArray *a, shockSolution element)
     a->used++;
 }
 
+//Initialise dynamic array to store float
 void initArray_float(floatArray *a)
 {
     // Allocate initial space
@@ -714,8 +801,10 @@ void initArray_float(floatArray *a)
 // Add element to array
 void insertArray_float(floatArray *a, float element)
 {
+	//Check if array if full
     if (a->used == a->size)
     {
+    	//If full double size and realloc space
         a->size *= 2;
         a->array = (float *)realloc(a->array, a->size * sizeof(float));
     }
@@ -726,6 +815,7 @@ void insertArray_float(floatArray *a, float element)
     a->used++;
 }
 
+//Free dynamic shock array
 void freeArray_shock(shockArray *a)
 {
 
@@ -737,6 +827,7 @@ void freeArray_shock(shockArray *a)
     a->size = 0;
 }
 
+//Free Dynamic float array
 void freeArray_float(floatArray *a)
 {
 
@@ -748,6 +839,7 @@ void freeArray_float(floatArray *a)
     a->size = 0;
 }
 
+//Solves NewtonRaphson for increasing theta values until a solution is not found
 void thetaSweep(shockArray* results, float M, float T, float B_u, float B_l, float G){
 	int solution = 1;
 	while(solution){

@@ -21,43 +21,63 @@
 
 int main(int argc, char *argv[]) {
 	
-	/* TODO: Parse Command Line Arguments
-	DONOT explicitly set arguments to filenames */
+
 	char* q2_file = argv[1];
 	char* q4_file = argv[2];
 	char* q5_file = argv[3];
-	char* q6_file = argv[4];
+	char* q6_file = argv[5];
 
-	double xo;
+	float xo = atof(argv[4]);
 
-	/* TODO: Add timing for each task and output running time in ms */
+
+	struct timeval start;
+	struct timeval stop;
+
     
 	/* Question 2 */
 	if (TASK2) {
-		printf("Shockwave - Started\n\n");
+		gettimeofday(&start, NULL);
 		shockwave(q2_file);
-		printf("Shockwave - Finished\n\n");
+		gettimeofday(&stop, NULL);
+	}
+	double elapsed_ms = (stop.tv_sec - start.tv_sec) * 1000.0;
+	if(TASK2){
+			elapsed_ms += (stop.tv_usec - start.tv_usec) / 1000.0;
+			printf("Root Finding:  %.2f milliseconds\n", elapsed_ms);
+			printf("\n");
 	}
 	
 	/* Question 4 */
 	if (TASK3) {
-		printf("Linear Systems - Started\n\n");
+		gettimeofday(&start, NULL);
 		linalgbsys(q4_file);
-		printf("Linear Systems - Finished\n\n");
+		gettimeofday(&stop, NULL);
+		elapsed_ms = (stop.tv_sec - start.tv_sec) * 1000.0;
+		elapsed_ms += (stop.tv_usec - start.tv_usec) / 1000.0;
+		printf("Linear Algebraic Systems:  %.2f milliseconds\n", elapsed_ms);
+		printf("\n");
 	}
 	
 	/* Question 5 */
 	if (TASK4) {
-		printf("Interpolation - Started\n\n");
+		gettimeofday(&start, NULL);
 		interp(q5_file,xo);
-		printf("Interpolation - Finished\n\n");
+		gettimeofday(&stop, NULL);
+		elapsed_ms = (stop.tv_sec - start.tv_sec) * 1000.0;
+		elapsed_ms += (stop.tv_usec - start.tv_usec) / 1000.0;
+		printf("Interpolation:  %.2f milliseconds\n", elapsed_ms);
+		printf("\n");
 	}
 	
 	/* Question 6 */
 	if (TASK5) {
-		printf("WaveEquation - Started\n\n");
+		gettimeofday(&start, NULL);
 		waveeqn(q6_file);
-		printf("WaveEquation - Finished\n\n");
+		gettimeofday(&stop, NULL);
+		elapsed_ms = (stop.tv_sec - start.tv_sec) * 1000.0;
+		elapsed_ms += (stop.tv_usec - start.tv_usec) / 1000.0;
+		printf("Wave Equations:  %.2f milliseconds\n", elapsed_ms);
+		printf("\n");
 	}
 
 	printf("All tasks Completed\n");

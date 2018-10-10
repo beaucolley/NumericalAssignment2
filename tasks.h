@@ -5,7 +5,7 @@
  *   Name        : <INSERT STUDENT NAME HERE>
  *
  ***************************************************************************/
-
+#include <stdio.h>
 #ifndef TASKS_H
 
 typedef struct{
@@ -31,7 +31,7 @@ void shockwave(const char* q2_file);
 
 void linalgbsys(const char* q4_file);
 
-void interp(const char* q5_file, const double xo);
+void interp(const char* q5_file, float xo);
 
 void waveeqn(const char* q6_file);
 
@@ -81,7 +81,7 @@ float interpolate(int n, float a[], float b[], float c[], float d[], float h[], 
 
 void initaliseFn(float fn[], float dx);
 
-void exportArray(FILE* data_out, float fn[], int Nx);
+void exportArray(FILE *data_out, float fn[], int Nx);
 
 void eulerUpwinding(float fn[], float fn1[], float c, float dt, float dx, int Nx);
 
