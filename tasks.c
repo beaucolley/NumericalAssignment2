@@ -287,8 +287,17 @@ void interp(const char* q5_file, float xo)
 	if (DEBUG_INTERP) {
 		printf("\ncubic\n%f\n",cubicSlineEstimate);
 	}
-
 	fclose(data_out);
+
+	//Output data plots
+	// data_out = fopen("out_interp_plot.csv","w+");
+	// int plotRes = 0.1;
+	// for(int i = 0; i<x.array[x.used-1] ; i+=plotRes){
+	// 	float lagrangeTemp =  lagrangeInterp(x,y,i);
+	// 	float cubicSpineTemp = cubicSplineInterp(x,y,xo);
+	// 	fprintf(data_out,"%f,%f\n",lagrangeTemp,cubicSpineTemp);
+	// }
+	// fclose(data_out);
 
 	//Free Arrarys
 	freeArray_float(&x);
