@@ -15,9 +15,9 @@
 
 //TASK Switches
 #define TASK2 1
-#define TASK3 1
-#define TASK4 1
-#define TASK5 1
+#define TASK3 0
+#define TASK4 0
+#define TASK5 0
 
 int main(int argc, char *argv[]) {
 	

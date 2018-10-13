@@ -20,8 +20,8 @@
 //DEBUG SWITCHES
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
-#define DEBUG_LINALSYS 1
-#define DEBUG_INTERP 1
+#define DEBUG_LINALSYS 0
+#define DEBUG_INTERP 0
 #define DEBUG_WAVE 0
 #define DEBUG_THOMAS 0
 
@@ -59,7 +59,8 @@ void shockwave(const char* q2_file)
 	partA.weak = NewtonRaphson(M,B_l,G,T);
 
 	if (DEBUG_SHOCKWAVE) {
-		printf("%f,%f,%f,%f\n",partA.M,partA.T,partA.weak,partA.strong);
+		printf("PartA\n");
+		printf("%f,%f,%f,%f\n",M,T,partA.weak,partA.strong);
 	}
 
 	if(DEBUG_SHOCKWAVE){
@@ -81,9 +82,11 @@ void shockwave(const char* q2_file)
 	//Set Parameters
 	shockArray partB;
 	initArray_shock(&partB);
-	T = 0; //Starting Theta
 
-	//Solve varying Theta Values
+	 //Starting Theta
+	T = 0;
+
+	//Solve for Theta Values
 	thetaSweep(&partB,M,T,B_u,B_l,G);
 
 	if(DEBUG_SHOCKWAVE){
