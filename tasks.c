@@ -20,10 +20,15 @@
 //DEBUG SWITCHES
 #define DEBUG_NEWTON_RAPHSON 0
 #define DEBUG_SHOCKWAVE 0
-#define DEBUG_LINALSYS 0
-#define DEBUG_INTERP 0
+#define DEBUG_LINALSYS 1
+#define DEBUG_INTERP 1
 #define DEBUG_WAVE 0
+#define DEBUG_THOMAS 0
 
+//Additional Output Files
+#define OUTPUT_SPLINE_COEFICIENTS 1
+
+//TASK1
 void shockwave(const char* q2_file)
 {
     float B_l, B_u, M, T, G;
@@ -152,7 +157,7 @@ void shockwave(const char* q2_file)
 
 
 }
-
+//TASK2
 void linalgbsys(const char* q4_file)
 {
 
@@ -223,7 +228,7 @@ void linalgbsys(const char* q4_file)
 	freeArray_float(&X);
 
 }
-
+//TASK3
 void interp(const char* q5_file, float xo)
 {
     //Open File
@@ -269,7 +274,7 @@ void interp(const char* q5_file, float xo)
 	data_out = fopen("out_interp.csv","w+");
 
 	if (DEBUG_INTERP) {
-		printf("xo = %f\n",xo);
+		printf("\nxo = %f\n",xo);
 	}
 
 	//Lagrangian Estimate
@@ -298,7 +303,7 @@ void interp(const char* q5_file, float xo)
 	 while(j<x.array[x.used-1]){
 		 lagrangeTemp = lagrangeInterp(x,y,j);
 		 cubicSplineTemp = cubicSplineInterp(x,y,j);
-		 fprintf(data_out,"%f,%f\n",lagrangeTemp,cubicSplineTemp);
+		 fprintf(data_out,"%f,%f,%f\n",j,lagrangeTemp,cubicSplineTemp);
 		 j = j + plotRes;
 		if (DEBUG_INTERP) {
 			printf("j = %f\n",j);
@@ -306,11 +311,12 @@ void interp(const char* q5_file, float xo)
 	 }
 	 fclose(data_out);
 
-	//Free Arrarys
+	//Free Arrays
 	freeArray_float(&x);
 	freeArray_float(&y);
 }
 
+//TASK4
 void waveeqn(const char* q6_file)
 {
 	//Open File
@@ -503,16 +509,19 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 	}
 
 	//Set C array
+	insertArray_float(&C,0);
 	for (int i = 0; i < x.used - 2; ++i) {
 		insertArray_float(&C,h[i]);
 	}
-	insertArray_float(&C,0);
+
 
 	//Set B array
 	insertArray_float(&B,0);
-	for (int i = 0; i < x.used - 1; ++i) {
+	for (int i = 0; i < x.used - 2; ++i) {
 		insertArray_float(&B,h[i]);
 	}
+	insertArray_float(&B,0);
+
 
 	//Set Q array
 	insertArray_float(&Q,0); //Natural Spline Condition
@@ -539,7 +548,7 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 	//Set d coefficients
 
 	for (int i = 0; i < x.used - 1; ++i) {
-		d[i] = (c[i+1]-c[i])/3*h[i];
+		d[i] = (c[i+1]-c[i])/(3*h[i]);
 	}
 
 	//DEBUG Print Spline Equations
@@ -550,6 +559,23 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 		}
 	}
 
+
+	if(DEBUG_INTERP){
+		printf("\nA\t\tB\t\tC\t\tD\t\n");
+		for(int i = 0; i<x.used;i++){
+			printf("%f\t%f\t%f\t%f\n",a[i],b[i],c[i],d[i]);
+		}
+	}
+
+	if(OUTPUT_SPLINE_COEFICIENTS){
+		FILE *data_out = fopen("spine_coeficients.csv","w+");
+		fprintf(data_out,"\nA\t\tB\t\tC\t\tD\t\n");
+		for(int i = 0; i<x.used;i++){
+			fprintf(data_out,"%f\t%f\t%f\t%f\n",a[i],b[i],c[i],d[i]);
+		}
+		fclose(data_out);
+	}
+
 	//Free Memory
 	freeArray_float(&A);
 	freeArray_float(&B);
@@ -557,12 +583,12 @@ float cubicSplineInterp(floatArray x, floatArray y, float target){
 	freeArray_float(&Q);
 	freeArray_float(&X);
 
-	return interpolate(n,a,b,c,d,h,x.array,target);
+	return interpolate(n,a,b,c,d,y.array,x.array,target);
 
 }
 
 //Return interpolated value for cubic spline
-float interpolate(int n, float a[], float b[], float c[], float d[], float h[], float x[], float target){
+float interpolate(int n, float a[], float b[], float c[], float d[], float y[], float x[], float target){
 
 
 	int i = 0;
@@ -573,9 +599,8 @@ float interpolate(int n, float a[], float b[], float c[], float d[], float h[], 
 		return 0;
 	}
 	//Determine which spline region target resides in
-	while(target > h[i]){
+	while(target>x[i+1])
 		i++;
-	}
 
 	//Return Value
 	return (a[i] + b[i]*(target-x[i]) + c[i]*pow((target-x[i]),2) + d[i]*pow((target - x[i]),3));
@@ -596,20 +621,20 @@ void thomasAlgorithm(floatArray *A,floatArray *B,floatArray *C,floatArray *Q,flo
 		Q->array[i] = Q->array[i] - (C->array[i]*Q->array[i-1])/A->array[i-1];
 	}
 
-
-	if (DEBUG_LINALSYS) {
-		printf("[Q,A]\n");
-		for(int i=0;i<A->used;i++){
-			printf("%f,%f\n",A->array[i],Q->array[i]);
-		}
-	}
-
 	//Solve Xn
 	X->array[X->used-1] = Q->array[Q->used-1]/A->array[A->used-1];
 
 	//Reverse Sweep
 	for(int i=X->used-2;i>=0;i--){
 		X->array[i] = (Q->array[i]-B->array[i]*X->array[i+1])/A->array[i];
+	}
+
+	if(DEBUG_THOMAS){
+		printf("ThomasAlgorithm\n");
+		printf("\nA\t\tB\t\tC\t\tQ\t\tX\n");
+		for(int i = 0;i < A->used;i++){
+			printf("%f\t%f\t%f\t%f\t%f\n",A->array[i],B->array[i],C->array[i],Q->array[i],X->array[i]);
+		}
 	}
 
 
